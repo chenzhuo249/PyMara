@@ -22,4 +22,7 @@ urlpatterns = [
     # http://127.0.0.1:8000/v1/logreg/...
     path("v1/logreg/", include("logreg.urls")),
 
+    # http://127.0.0.1:8000/v1/index/...
+    path("v1/index/", include("index.urls")),
+
 ]

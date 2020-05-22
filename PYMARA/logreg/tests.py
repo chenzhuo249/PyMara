@@ -53,3 +53,16 @@ from django.test import TestCase
 #
 # print(judge_data(r"[0-9a-zA-Z_]{8,16}", str2))
 
+
+# from Public.publictoken import Jwt
+# from django.conf import settings
+#
+# j = Jwt()
+# token = j.my_encode({"id":"1","username": "13006370870"}, "0TLNWooggVcDzSkK")
+# print(token)
+# print(type(token))
+
+# token = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJleHAiOjE1OTAyMjU1ODguMDA1Nzc5NSwiaWQiOiIxIiwidXNlcm5hbWUiOiIxMzAwNjM3MDg3MCJ9.F2YkDGNo5OIt-2GAYT-BiZHjB-pOy7265gwabO_Zf_4"
+#
+# res = j.decode(token, settings.JWT_TOKEN_KEY)
+# print(res)

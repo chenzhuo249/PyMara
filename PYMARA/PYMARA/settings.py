@@ -149,5 +149,10 @@ CORS_ALLOW_HEADERS = (
     'user-agent',
     'x-csrftoken',
     'x-requested-with',
+    'pymaratoken',
 )
+
+JWT_TOKEN_KEY = "0TLNWooggVcDzSkK"
+
+
 

@@ -7,23 +7,23 @@ class User(PublicModel):
         用户核心表
     """
     USER_STATUS_CHOICES = (
-        ('0', '正常'),
-        ('1', '限制'),
-        ('2', '封禁'),
-        ('3', '删除'),
+        (0, '正常'),
+        (1, '限制'),
+        (2, '封禁'),
+        (3, '删除'),
     )
     USER_PERMISSION_CHOICES = (
-        ('1', '普通'),
-        ('2', '会员'),
-        ('3', '管理员'),
-        ('4', 'GOD')
+        (1, '普通'),
+        (2, '会员'),
+        (3, '管理员'),
+        (4, 'GOD')
     )
     # 可以为空,使用登录账号作为昵称,最多8个字符(中英文都为一个字符)
     username = models.CharField(verbose_name='用户名', max_length=16, unique=True)
     # 可以为空,使用默认头像
     avatar = models.ImageField(verbose_name='头像', upload_to='avatar', default='./default.jpg')
-    status = models.SmallIntegerField(verbose_name='状态', choices=USER_STATUS_CHOICES, default='0')
-    permission = models.SmallIntegerField(verbose_name='权限', choices=USER_PERMISSION_CHOICES, default='1')
+    status = models.SmallIntegerField(verbose_name='状态', choices=USER_STATUS_CHOICES, default=0)
+    permission = models.SmallIntegerField(verbose_name='权限', choices=USER_PERMISSION_CHOICES, default=1)
 
 
 class Login(PublicModel):

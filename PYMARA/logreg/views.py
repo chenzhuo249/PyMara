@@ -6,7 +6,9 @@
 {"code": 605, "error": "用户注册失败,验证码校验失败"}
 {"code": 606, "error": "用户登录失败,缺少账号或密码"}
 {"code": 607, "error": "用户登录失败,账号或密码错误"}
-
+{"code": 608, "error": "用户登录失败,账号不存在"}
+{"code": 609, "error": "用户登录失败,账号或密码有误"}
+{"code": 610, "error": "用户登录失败,用户账号状态异常"}
 """
 
 import json
@@ -18,10 +20,12 @@ from django.http import JsonResponse
 from django.shortcuts import render
 from django.views import View
 from user.models import User, Login
+from django.conf import settings
 
 from Public.message.send_msg import Message
 from Public.message.send_email_465 import SendEmail
 from django.db import transaction
+from Public.publictoken import Jwt
 
 
 class JudgePhoneNumber(View):
@@ -109,13 +113,14 @@ class SendMessage(View):
         phone_num = str(phone_num_obj["phone_number"])
         ran_num = self.create_random_number()
 
-        # msh_obj = Message()
-        # res_str = msh_obj.send_message(phone_num, ran_num)
-        #
-        # res_obj = json.loads(res_str)
+        msh_obj = Message()
+        res_str = msh_obj.send_message(phone_num, ran_num)
+
+        res_obj = json.loads(res_str)
+
         # 测试节约短信验证码用
-        res_obj = {"code":0, "data":"发送成功"}
-        print(f"------- {ran_num} -------")
+        # res_obj = {"code":0, "data":"发送成功"}
+        # print(f"------- {ran_num} -------")
 
         code = res_obj["code"]
         data = res_obj["data"]
@@ -224,12 +229,27 @@ class UserLogin(View):
         if not self.judge_data(r"1[0-9]{10}", phone) and not self.judge_data(r"[0-9a-zA-Z_]{8,16}", psd):
             return JsonResponse({"code": 607, "error": "用户登录失败,账号或密码错误"})
 
-        print("--------------")
-        print(phone, psd)
+        hash_psd = Register().hash_md5_psd(psd)
+        try:
+            old_psd = Login.objects.get(identifier=phone)
+        except Exception as e:
+            print("------Login get error------")
+            print(e)
+            return JsonResponse({"code": 608, "error": "用户登录失败,账号不存在"})
+        # print("------status------")
+        # print(old_psd.user.status, type(old_psd.user.status))
+        # 0 <class 'int'>
 
-        return JsonResponse({"code":200, "data": "你成功啦"})
+        if hash_psd == old_psd.token:
+            if old_psd.user.status == 0:
+                # TODO 签发 token
+                jwt_obj = Jwt()
+                str_token = jwt_obj.my_encode({"id":old_psd.user.id, "phone":old_psd.identifier}, settings.JWT_TOKEN_KEY)
+                return JsonResponse({"code": 200, "data": str_token})
 
+            return JsonResponse({"code": 610, "error": "用户登录失败,用户账号状态异常"})
 
+        return JsonResponse({"code": 609, "error": "用户登录失败,账号或密码有误"})
 
 
 
