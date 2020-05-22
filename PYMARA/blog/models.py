@@ -1,4 +1,9 @@
+"""
+2020/5/22 修改
+"""
+
 from django.db import models
+
 from user.models import User, UserHistory
 from Public.publicmodel import PublicModel
 
@@ -6,7 +11,7 @@ from Public.publicmodel import PublicModel
 class Blog(PublicModel):
     """
         博客核心表
-        用户表多对多
+        用户表一对多
     """
     BLOG_STATUS_CHOICES = (
         ('1', '已发布'),
@@ -14,13 +19,13 @@ class Blog(PublicModel):
         ('3', '已删除'),
     )
     title = models.CharField(verbose_name='标题', max_length=32)
-    abstract = models.CharField(verbose_name='摘要', max_length=32)
+    abstract = models.CharField(verbose_name='摘要', max_length=96)
     original = models.BooleanField(verbose_name='原创', default=True)
     author = models.IntegerField(verbose_name='作者')
-    status = models.CharField(verbose_name='状态', choices=BLOG_STATUS_CHOICES, max_length=1)
+    status = models.CharField(verbose_name='状态', choices=BLOG_STATUS_CHOICES, max_length=1,default='1')
     category = models.CharField(verbose_name='分类', max_length=16, db_index=True)
     is_show=models.BooleanField(verbose_name='展示',default=True)
-    user = models.ManyToManyField(User)
+    user = models.ForeignKey(User,on_delete=models.CASCADE)
 
 
 class Content(PublicModel):
@@ -61,9 +66,11 @@ class BlogHistory(PublicModel):
     favorite = models.IntegerField(verbose_name='收藏', default=0)
     praise = models.IntegerField(verbose_name='点赞', default=0)
     browse = models.IntegerField(verbose_name='浏览', default=0)
-    step = models.IntegerField(verbose_name='踩', default=0)
+    score = models.IntegerField(verbose_name='总分', default=0)
     blog = models.OneToOneField(Blog, on_delete=models.CASCADE)
 
+    class Meta:
+        ordering=['score']
 
 class BrowserHistory(PublicModel):
     """
@@ -115,8 +122,4 @@ class CommentHistory(PublicModel):
     img = models.ImageField(verbose_name='图片', upload_to='img/comment', null=True)
     link = models.CharField(verbose_name='链接', max_length=128, null=True)
     comment = models.OneToOneField(Comment, on_delete=models.CASCADE)
-
-
-def test_git():
-    pass
 
