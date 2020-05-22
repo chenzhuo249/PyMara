@@ -115,3 +115,8 @@ class CommentHistory(PublicModel):
     img = models.ImageField(verbose_name='图片', upload_to='img/comment', null=True)
     link = models.CharField(verbose_name='链接', max_length=128, null=True)
     comment = models.OneToOneField(Comment, on_delete=models.CASCADE)
+
+
+def test_git():
+    pass
+
