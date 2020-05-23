@@ -56,36 +56,38 @@ class Jwt:
         :param exp: 有效时间
         :return: 字符串类型token
         """
-        header = {'typ': 'JWT', 'alg': 'HS256'}
-        # 转json
-        header_json = json.dumps(header, separators=(',', ':'), sort_keys=True)
-        # urlsafe_b64encode加密去空格
-        header_bs = Jwt.b64encode(header_json.encode())
-        # 深拷贝字典防止改变原字典
+        header = {'alg': 'HS256', 'typ': 'JWT'}
+        header_json_str = json.dumps(header, separators=(',', ':'), sort_keys=True)
+        header_b64_bytes = Jwt.my_b64encode(header_json_str.encode())
+
         payload = copy.deepcopy(my_payload)
-        # 加过期时间
         payload['exp'] = time.time() + exp
-        payload_json = json.dumps(payload, separators=(',', ':'), sort_keys=True)
-        payload_bs = Jwt.b64encode(payload_json.encode())
-        # 使用key进行SHA256加密
-        hm = hmac.new(key.encode(), header_bs + b'.' + payload_bs, digestmod='SHA256')
-        hm_bs = Jwt.b64encode(hm.digest())
-        return (header_bs + b"." + payload_bs + b"." + hm_bs).decode()
+        payload_json_str = json.dumps(payload, separators=(',', ':'), sort_keys=True)
+        payload_b64_bytes = Jwt.my_b64encode(payload_json_str.encode())
+
+        hm = hmac.new(key.encode(), header_b64_bytes + b'.' + payload_b64_bytes, digestmod='SHA256')
+        hm_bs = Jwt.my_b64encode(hm.digest())
+        return (header_b64_bytes + b"." + payload_b64_bytes + b"." + hm_bs).decode()
 
     @staticmethod
-    def b64encode(j_s):
+    def my_b64encode(j_s):
         return base64.urlsafe_b64encode(j_s).replace(b'=', b'')
 
     @staticmethod
     def my_decode(token_str, key):
+        """
+        校验token令牌
+        :param token_str:
+        :param key:
+        :return:
+        """
         token = token_str.encode()
         header_bs, payload_bs, sign_bs = token.split(b'.')
         hm = hmac.new(key.encode(), header_bs + b'.' + payload_bs, digestmod='SHA256')
-        if Jwt.b64encode(hm.digest()) != sign_bs:
+        if Jwt.my_b64encode(hm.digest()) != sign_bs:
             raise
         # 校验时间
-        payload_json = Jwt.b64decode(payload_bs)
-        # python3.6 loads可以转字节串
+        payload_json = Jwt.my_b64decode(payload_bs)
         payload = json.loads(payload_json)
         exp = payload['exp']
         if time.time() > exp:
@@ -94,20 +96,8 @@ class Jwt:
         return payload
 
     @staticmethod
-    def b64decode(b_s):
+    def my_b64decode(b_s):
         rem = len(b_s) % 4
         b_s += b'=' * (4 - rem)
         return base64.urlsafe_b64decode(b_s)
 
-# if __name__ == '__main__':
-#     s = Jwt.my_encode({"id":"1","username": "13006370870"}, "0TLNWooggVcDzSkK")
-#     print(s)
-#     time.sleep(2)
-#     res = Jwt.my_decode(s, '0TLNWooggVcDzSkK')
-#     print(res)
-#     '''
-#         eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.
-#         eyJleHAiOjE1OTAyMjQ5NjAuNzU4ODksImlkIjoiMSIsInVzZXJuYW1lIjoiMTMwMDYzNzA4NzAifQ.
-#         09hVHaJ5rANoG0Ss6BELlUM-4aPvuaxxN-BPCZZu5fg
-#         {'exp': 1590224960.75889, 'id': '1', 'username': '13006370870'}
-#     '''
