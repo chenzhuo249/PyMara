@@ -13,6 +13,15 @@ urlpatterns = [
 
     # http://127.0.0.1:8000/v1/logreg/login
     path("login", views.UserLogin.as_view()),
+
+    # http://127.0.0.1:8000/v1/logreg/find_psd
+    path("find_psd", views.FindPsd.as_view()),
+
+    # http://127.0.0.1:8000/v1/logreg/change_psd
+    path("change_psd", views.ChangePsd.as_view()),
+
+    # http://127.0.0.1:8000/v1/logreg/judge_old_phone
+    path("judge_old_phone", views.JudgeOldPhone.as_view()),
 ]
 
 

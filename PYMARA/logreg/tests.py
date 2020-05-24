@@ -66,3 +66,11 @@ from django.test import TestCase
 #
 # res = j.decode(token, settings.JWT_TOKEN_KEY)
 # print(res)
+
+# ph = {"name":"chenzhuo", "info": "pshh"}
+# info = ph.get("info1")
+# print(info, type(info))
+# if not info:
+#     print("aaa")
+# else:
+#     print("bbb")
