@@ -11,7 +11,7 @@ class Message:
 
     client = smsclient.ZhenziSmsClient(apiUrl, appId, appSecret)
 
-    def send_message(self, phone_num, code, templateId="141", time="五分钟"):
+    def send_message(self, phone_num, code, templateId="141", time="五"):
         """
             发送短信验证码
         :param phone_num: str 收件人手机号

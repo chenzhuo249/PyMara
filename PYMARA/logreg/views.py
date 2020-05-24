@@ -1,6 +1,6 @@
 """
 {"code": 601, "error":"手机号不可用"}
-{"code": 602, "error": "您的短信走丢了哦,再发一条试试吧!"}
+{"code": 602, "error": "短信平台发送短信失败"}
 {"code": 603, "error": "验证码校验失败"}
 {"code": 604, "error": "用户注册失败(mysql create user error)"}
 {"code": 605, "error": "用户注册失败,验证码校验失败"}
@@ -9,6 +9,11 @@
 {"code": 608, "error": "用户登录失败,账号不存在"}
 {"code": 609, "error": "用户登录失败,账号或密码有误"}
 {"code": 610, "error": "用户登录失败,用户账号状态异常"}
+{"code": 611, "error": "验证码写入redis失败"}
+{"code": 612, "error": "校验失败,缺少手机号或验证码"}
+{"code": 613, "error": "校验失败,验证码有误"}
+{"code": 614, "error": "新密码mysql存储失败"}
+{"code": 615, "error": "手机号未注册"}
 """
 
 import json
@@ -31,11 +36,12 @@ from Public.publictoken import Jwt
 class JudgePhoneNumber(View):
 
     def post(self, request):
-        # return JsonResponse({"code":601, "error":"手机号不可用"})
-        # return JsonResponse({"code":200, "data":"手机号可用"})
 
         phone_num_obj = json.loads(request.body.decode())
-        phone_num = str(phone_num_obj["phone_number"])
+        phone_num = phone_num_obj.get("phone_number")
+
+        if not phone_num:
+            return JsonResponse({"code": 613, "error": "校验失败,手机号有误"})
 
         try:
             old_data = Login.objects.get(identifier=phone_num, method="2")
@@ -111,34 +117,40 @@ class SendMessage(View):
 
         phone_num_obj = json.loads(request.body.decode())
         phone_num = str(phone_num_obj["phone_number"])
+        info = str(phone_num_obj.get("info"))
+
+        str_key = "register:{}"
+        if info == "findPsd":
+            str_key = "findpsd:{}"
+
         ran_num = self.create_random_number()
 
+        try:
+            # 在此处将验证码存入 redis,过期时间　300秒
+            # TODO redis 方案一　需要修改
+            import redis
+            redis_15_key = str_key.format(phone_num)
+            r = redis.Redis(db=15)
+            r.set(name=redis_15_key, value=ran_num, ex=300)
+        except Exception as e:
+            print("------redis set random number error-------")
+            print(e)
+            return JsonResponse({"code": 611, "error": "验证码写入redis失败"})
+
+        # 发送手机验证码
         msh_obj = Message()
         res_str = msh_obj.send_message(phone_num, ran_num)
-
         res_obj = json.loads(res_str)
-
-        # 测试节约短信验证码用
-        # res_obj = {"code":0, "data":"发送成功"}
-        # print(f"------- {ran_num} -------")
 
         code = res_obj["code"]
         data = res_obj["data"]
 
-        if not code:
-            # 在此处将验证码存入 redis,过期时间　300秒
-            # TODO redis 方案一　需要修改
-            import redis
-            redis_15_key = "register:{}".format(phone_num)
-            r = redis.Redis(db=15)
-            r.set(name=redis_15_key, value=ran_num, ex=300)
+        if code:
+            # 此时用户验证短信发送失败 自动发系统报错邮件 到管理员邮箱
+            self.send_error_email_to_manager(phone_num, code, data)
+            return JsonResponse({"code": 602, "error": "短信平台发送短信失败"})
 
-            return JsonResponse({"code": 200, "data": "发送成功,请在手机端查收"})
-
-        # 此时用户验证短信发送失败 自动发系统报错邮件 到管理员邮箱
-        self.send_error_email_to_manager(phone_num, code, data)
-
-        return JsonResponse({"code": 602, "error": "您的短信走丢了哦,再发一条试试吧!"})
+        return JsonResponse({"code": 200, "data": "发送成功,请在手机端查收"})
 
 
 class Register(View):
@@ -165,7 +177,7 @@ class Register(View):
             return False
         return False
 
-    def hash_md5_psd(self, psd):
+    def hash_md5_psd(self, str_psd):
         """
             将明文密码通过 md5算法转成密文存储
         :param psd: str 明文密码
@@ -173,7 +185,7 @@ class Register(View):
         """
         import hashlib
         m = hashlib.md5()
-        m.update(psd.encode())  # 注意此处应是字节串
+        m.update(str_psd.encode())  # 注意此处应是字节串
         return m.hexdigest()
 
     def post(self, request):
@@ -251,5 +263,66 @@ class UserLogin(View):
 
         return JsonResponse({"code": 609, "error": "用户登录失败,账号或密码有误"})
 
+
+class FindPsd(View):
+
+    def post(self, request):
+        msg_obj = json.loads(request.body.decode())
+        str_msg_num = msg_obj.get("msg_number")
+        str_phone_num = msg_obj.get("phone_number")
+
+        if not str_phone_num or not str_msg_num:
+            return JsonResponse({"code": 612, "error": "校验失败,缺少手机号或验证码"})
+
+        str_key = "findpsd:{}".format(str_phone_num)
+        res = Register().judge_msg_number(15, str_key, str_msg_num)
+
+        if res:
+            return JsonResponse({"code":200, "data":str_phone_num})
+
+        return JsonResponse({"code": 613, "error": "校验失败,验证码有误"})
+
+
+class ChangePsd(View):
+
+    def post(self, request):
+        psd_obj = json.loads(request.body.decode())
+        str_psd_1 = psd_obj.get("psd1")
+        str_psd_2 = psd_obj.get("psd2")
+        str_phone = psd_obj.get("phone")
+        if not str_psd_1 or not str_psd_2 or not str_phone:
+            return JsonResponse({"code": 606, "error": "用户登录失败,缺少账号或密码"})
+        if str_psd_1 != str_psd_2:
+            return JsonResponse({"code": 609, "error": "用户登录失败,账号或密码有误"})
+
+        # 将数据库中的密码修改
+        new_psd = Register().hash_md5_psd(str_psd_1)
+
+        try:
+            old_user = Login.objects.get(identifier=str_phone, user__status=0)
+            old_user.token = new_psd
+            old_user.save()
+        except Exception as e:
+            print("-------change new psd error-------")
+            print(e)
+            return JsonResponse({"code": 614, "error": "新密码mysql存储失败"})
+
+        return JsonResponse({"code": 200, "data": "重置成功"})
+
+
+class JudgeOldPhone(View):
+
+    def post(self, request):
+        phone_num_obj = json.loads(request.body.decode())
+        phone_num = phone_num_obj.get("phone_number")
+
+        if not phone_num:
+            return JsonResponse({"code": 613, "error": "校验失败,手机号有误"})
+
+        try:
+            old_data = Login.objects.get(identifier=phone_num, method="2", user__status=0)
+        except Exception as e:
+            return JsonResponse({"code": 615, "error": "手机号未注册"})
+        return JsonResponse({"code": 200, "error":"手机号状态正常,可修改密码"})
 
 
