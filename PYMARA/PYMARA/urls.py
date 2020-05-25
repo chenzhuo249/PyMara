@@ -26,3 +26,7 @@ urlpatterns = [
     path("v1/index/", include("index.urls")),
 
 ]
+
+# this is test git
+a = 12
+b = 23
