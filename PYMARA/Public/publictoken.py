@@ -31,10 +31,11 @@ def logging_check(fun):
             json_obj = json.loads(request.body.decode())
             request.my_data = json_obj # 视图函数从这里取, json对象
         try:
-            print(id)
+            print(">>>>用户id: %s"%id)
             user = User.objects.get(id=id, status=0)
-            print(user.username)
+            print(">>>>用户名: %s"%user.username)
             request.my_user = user # 登录的用户对象, MyModel对象(User表实例)
+            request.my_user_phone = phone # 登录用户的手机号(本项目的唯一注册账号)
         except:
             return JsonResponse({'code': 444, 'error': '账号权限被限制'})
         print('---通过验证---')
@@ -54,7 +55,7 @@ class Jwt:
         :param my_payload:私有声明
         :param key: token_key
         :param exp: 有效时间
-        :return: 字符串类型token
+        :return: str 字符串类型token
         """
         header = {'alg': 'HS256', 'typ': 'JWT'}
         header_json_str = json.dumps(header, separators=(',', ':'), sort_keys=True)
@@ -79,7 +80,7 @@ class Jwt:
         校验token令牌
         :param token_str:
         :param key:
-        :return:
+        :return: dict payload对象
         """
         token = token_str.encode()
         header_bs, payload_bs, sign_bs = token.split(b'.')

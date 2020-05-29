@@ -1,9 +1,7 @@
 """
-2020/5/22 修改
+    5.29 09.55修改
 """
-
 from django.db import models
-
 from user.models import User, UserHistory
 from Public.publicmodel import PublicModel
 
@@ -21,12 +19,13 @@ class Blog(PublicModel):
     title = models.CharField(verbose_name='标题', max_length=32)
     abstract = models.CharField(verbose_name='摘要', max_length=96)
     original = models.BooleanField(verbose_name='原创', default=True)
-    author = models.IntegerField(verbose_name='作者')
+    author = models.IntegerField(verbose_name='作者',null=True)
+    # url=models.CharField(verbose_name='地址',null=True,max_length=128)
     status = models.CharField(verbose_name='状态', choices=BLOG_STATUS_CHOICES, max_length=1,default='1')
-    category = models.CharField(verbose_name='分类', max_length=16, db_index=True)
+    # category = models.CharField(verbose_name='分类', max_length=16, db_index=True)
     is_show=models.BooleanField(verbose_name='展示',default=True)
+    blog_type=models.BooleanField(verbose_name='博客类型',default=True)
     user = models.ForeignKey(User,on_delete=models.CASCADE)
-
 
 class Content(PublicModel):
     """
@@ -48,12 +47,13 @@ class Annex(PublicModel):
     blog = models.ForeignKey(Blog, on_delete=models.PROTECT)
 
 
-class Tag(PublicModel):
+class Category(PublicModel):
     """
         标签表
         博客表一对多
     """
-    tag = models.CharField(verbose_name='标签名', max_length=16)
+    category = models.CharField(verbose_name='分类', max_length=16, db_index=True)
+    # tag = models.CharField(verbose_name='标签名', max_length=16)
     blog = models.ForeignKey(Blog, on_delete=models.CASCADE)
 
 

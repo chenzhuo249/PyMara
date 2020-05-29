@@ -21,7 +21,7 @@ class User(PublicModel):
     # 可以为空,使用登录账号作为昵称,最多8个字符(中英文都为一个字符)
     username = models.CharField(verbose_name='用户名', max_length=16, unique=True)
     # 可以为空,使用默认头像
-    avatar = models.ImageField(verbose_name='头像', upload_to='avatar', default='./default.jpg')
+    avatar = models.ImageField(verbose_name='头像', upload_to='avatar', default='default.jpg')
     status = models.SmallIntegerField(verbose_name='状态', choices=USER_STATUS_CHOICES, default=0)
     permission = models.SmallIntegerField(verbose_name='权限', choices=USER_PERMISSION_CHOICES, default=1)
 
@@ -42,7 +42,7 @@ class Login(PublicModel):
     method = models.CharField(verbose_name='登录方式', choices=LOGIN_METHOD_CHOICES, max_length=1)
     identifier = models.CharField(verbose_name='唯一标示', max_length=16, unique=True)
     token = models.CharField(verbose_name='登录令牌', max_length=32)
-    user = models.ForeignKey(User, on_delete=models.CASCADE)
+    user = models.ForeignKey(User, on_delete=models.CASCADE, null=True)
 
 
 # class OtherLogin(PublicModel):

@@ -10,8 +10,8 @@ class ZhenziSmsClient(object):
 		self.appId = appId
 		self.appSecret = appSecret
 
-	def send(self, params):
-		data = params
+	def send(self, dict_params):
+		data = dict_params
 		data['appId'] = self.appId
 		data['appSecret'] = self.appSecret
 		if ('templateParams' in data) :

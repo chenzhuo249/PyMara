@@ -8,4 +8,4 @@ class JudgeLogin(View):
     def post(self, request):
         user = request.my_user
 
-        return JsonResponse({"code":200, "data": user.username})
+        return JsonResponse({"code":200, "data": "", "uname": user.username})

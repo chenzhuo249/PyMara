@@ -14,23 +14,28 @@
 {"code": 613, "error": "校验失败,验证码有误"}
 {"code": 614, "error": "新密码mysql存储失败"}
 {"code": 615, "error": "手机号未注册"}
+{"code": 616, "error": "微博服务器正忙"}
+{"code": 617, "error": "微博返回有误"}
+{"code": 618, "error": "微博关联失败"}
 """
 
-import json
 import re
+import json
 import time
 import random
+import requests
 
-from django.http import JsonResponse
-from django.shortcuts import render
 from django.views import View
-from user.models import User, Login
+from django.http import JsonResponse
 from django.conf import settings
-
-from Public.message.send_msg import Message
-from Public.message.send_email_465 import SendEmail
 from django.db import transaction
+
+from Public.message.send_email_465 import SendEmail
+from Public.message.send_msg import Message
 from Public.publictoken import Jwt
+
+from user.models import User, Login
+from urllib.parse import urlencode
 
 
 class JudgePhoneNumber(View):
@@ -257,7 +262,12 @@ class UserLogin(View):
                 # TODO 签发 token
                 jwt_obj = Jwt()
                 str_token = jwt_obj.my_encode({"id":old_psd.user.id, "phone":old_psd.identifier}, settings.JWT_TOKEN_KEY)
-                return JsonResponse({"code": 200, "data": str_token})
+                dict_data = {"code": 200,
+                             "data": str_token,
+                             "id":old_psd.user.id,
+                             "uname":old_psd.user.username,
+                             "phone": old_psd.identifier}
+                return JsonResponse(dict_data)
 
             return JsonResponse({"code": 610, "error": "用户登录失败,用户账号状态异常"})
 
@@ -324,5 +334,148 @@ class JudgeOldPhone(View):
         except Exception as e:
             return JsonResponse({"code": 615, "error": "手机号未注册"})
         return JsonResponse({"code": 200, "error":"手机号状态正常,可修改密码"})
+
+
+class WeiboLoginView(View):
+
+    def get(self, request):
+        # https://api.weibo.com/oauth2/authorize
+        # ?client_id=YOUR_CLIENT_ID
+        # &response_type=code
+        # &redirect_uri=YOUR_REGISTERED_REDIRECT_URI
+
+        weibo_url = "https://api.weibo.com/oauth2/authorize"
+
+        dict_params = {"client_id":settings.MY_WB_APP_KEY,
+                       "response_type":"code",
+                       "redirect_uri":settings.MY_WB_REDIRECT_URI}
+
+        weibo_login_url = "{}?{}".format(weibo_url, urlencode(dict_params))
+        return JsonResponse({"code": 200, "data":weibo_login_url})
+
+
+class WeiboUserView(View):
+
+    def get(self, request):
+        weibo_code = request.GET.get("code")
+        print("----------------")
+        print(weibo_code)
+        if not weibo_code:
+            return JsonResponse({"code":403, "error": "回调error"})
+
+        token_url = "https://api.weibo.com/oauth2/access_token"
+
+        req_data = {
+            "client_id": settings.MY_WB_APP_KEY,
+            "client_secret": settings.MY_WB_APP_SECRET,
+            "grant_type": "authorization_code",
+            "code": weibo_code,
+            "redirect_uri": settings.MY_WB_REDIRECT_URI # 回调地址
+        }
+
+        response = requests.post(url=token_url, data=req_data)
+        resp_obj = json.loads(response.text)
+        if response.status_code != 200 or resp_obj.get("error"):
+            return JsonResponse({"code": 616, "error": "微博服务器正忙"})
+
+        access_token = resp_obj.get("access_token")
+        weibo_uid = resp_obj.get("uid")
+
+        if not access_token or not weibo_uid:
+            return JsonResponse({"code": 617, "error": "微博返回有误"})
+
+        # 注意：数据库中各种登录账号存在同一个字段里, 而且具有唯一索引,
+        # 微博uid为纯数字格式,以免与其他账号冲突, 所以添加 'w_'字符作为唯一标识
+        my_weibo_uid = "w_{}".format(weibo_uid)
+        # 微博登录成功, token, uid获取成功, 写入数据库
+        try:
+            weibo_user = Login.objects.get(identifier=my_weibo_uid, method="3")
+        except Exception as e:
+            # 未查询到用户记录, 该用户第一次登录, 此时还没有关联PyMara内部账号, 外键关联为空
+            Login.objects.create(method="3", identifier=my_weibo_uid, token=access_token)
+            # 需要做关联注册,　带回 my_weibo_uid, 用作关联内部用户
+            return JsonResponse({"code": 302, "data": my_weibo_uid})
+        else:
+            old_pymara_user = weibo_user.user
+
+            if old_pymara_user:
+                # 微博账号,关联过内部用户, 用内部用户账号登录
+                if old_pymara_user.status != 0:
+                    return JsonResponse({"code": 610, "error": "用户登录失败,用户账号状态异常"})
+                # TODO 用户状态正常 签发 token
+                old_user_phone = Login.objects.get(user=old_pymara_user, method="2").identifier
+                jwt_obj = Jwt()
+                str_token = jwt_obj.my_encode({"id":old_pymara_user.id, "phone":old_user_phone}, settings.JWT_TOKEN_KEY)
+
+                dict_data = {"code": 200,
+                             "data": str_token,
+                             "id": old_pymara_user.id,
+                             "uname": old_pymara_user.username,
+                             "phone": old_user_phone,
+                             "wuid":weibo_user.identifier}
+                return JsonResponse(dict_data)
+            else:
+                # 微博账号,没有关联过内部用户,需要做关联注册
+                return JsonResponse({"code": 302, "data": my_weibo_uid})
+
+
+# 微博登录绑定PyMara用户
+class BindPymaraUser(View):
+
+    def judge_data(self, str_re, str_word):
+        re_res = re.findall(str_re, str_word)
+        if re_res and len(re_res) == 1 and re_res[0] == str_word:
+            return True
+        return False
+
+    def post(self, request, wuid):
+        user_obj = json.loads(request.body.decode())
+        phone = user_obj.get("phone_number")
+        psd = user_obj.get("password")
+
+        if not phone or not psd or not wuid:
+            return JsonResponse({"code": 606, "error": "用户登录失败,缺少账号或密码"})
+
+        # 后端校验数据
+        if not self.judge_data(r"1[0-9]{10}", phone) and not self.judge_data(r"[0-9a-zA-Z_]{8,16}", psd):
+            return JsonResponse({"code": 607, "error": "用户登录失败,账号或密码错误"})
+
+        hash_psd = Register().hash_md5_psd(psd)
+        try:
+            old_login = Login.objects.get(identifier=phone)
+        except Exception as e:
+            print("------Login get error------")
+            print(e)
+            return JsonResponse({"code": 608, "error": "用户登录失败,账号不存在"})
+
+        if hash_psd == old_login.token:
+            if old_login.user.status == 0:
+                # TODO 将微博账号与用户关联
+                try:
+                    weibo_login = Login.objects.get(identifier=wuid)
+                    weibo_login.user = old_login.user
+                    weibo_login.save()
+                except Exception as e:
+                    print("--------------")
+                    print(e)
+                    return JsonResponse({"code": 618, "error": "微博关联失败"})
+
+                # 绑定成功
+                jwt_obj = Jwt()
+                str_token = jwt_obj.my_encode({"id":weibo_login.user.id, "phone":old_login.identifier}, settings.JWT_TOKEN_KEY)
+
+                dict_data = {"code": 200,
+                             "data": str_token,
+                             "id":weibo_login.user.id,
+                             "uname":weibo_login.user.username,
+                             "phone": old_login.identifier,
+                             "wuid":weibo_login.identifier}
+                return JsonResponse(dict_data)
+
+            return JsonResponse({"code": 610, "error": "用户登录失败,用户账号状态异常"})
+
+        return JsonResponse({"code": 609, "error": "用户登录失败,账号或密码有误"})
+
+
 
 

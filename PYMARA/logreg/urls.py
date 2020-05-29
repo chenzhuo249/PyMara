@@ -22,6 +22,15 @@ urlpatterns = [
 
     # http://127.0.0.1:8000/v1/logreg/judge_old_phone
     path("judge_old_phone", views.JudgeOldPhone.as_view()),
+
+    # http://127.0.0.1:8000/v1/logreg/weibo/login
+    path("weibo/login", views.WeiboLoginView.as_view()),
+
+    # http://127.0.0.1:8000/v1/logreg/weibo/user?code=xxx (get)
+    path("weibo/user", views.WeiboUserView.as_view()),
+
+    # http://127.0.0.1:8000/v1/logreg/weibo/user/<str:wuid>
+    path("weibo/user/<str:wuid>", views.BindPymaraUser.as_view()),
 ]
 
 

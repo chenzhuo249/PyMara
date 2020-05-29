@@ -154,3 +154,14 @@ CORS_ALLOW_HEADERS = (
 
 JWT_TOKEN_KEY = "0TLNWooggVcDzSkK"
 
+# chenPyMara
+MY_WB_APP_KEY = "94814943"
+MY_WB_APP_SECRET = "6da055316c29759cbeb7e05b3adef1c2"
+MY_WB_REDIRECT_URI = "http://127.0.0.1:7004/pymara/templates/user/callback.html"
+
+
+# PyMara 正式上线
+# MY_WB_APP_KEY = "2734830647"
+# MY_WB_APP_SECRET = "b52607cd1d66b1bb291b96888770820c"
+# MY_WB_REDIRECT_URI = "http://121.196.122.72:7000/pymara/templates/user/callback.html"
+# "http://121.196.122.72:7000/pymara/templates/index.html"
