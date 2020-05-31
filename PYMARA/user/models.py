@@ -108,7 +108,6 @@ class SecurityQuestion(PublicModel):
     user = models.OneToOneField(User, on_delete=models.CASCADE)
 
 
-
 class AvatarHistory(PublicModel):
     """
         历史头像表
@@ -132,7 +131,7 @@ class Medal(PublicModel):
         ('6', 'LEVEL 6'),
     )
     name = models.CharField(verbose_name='名称', max_length=4)
-    level = models.CharField(verbose_name='等级', choices=MEDAL_LEVEL_CHOICES, max_length=1,default='1')
+    level = models.CharField(verbose_name='等级', choices=MEDAL_LEVEL_CHOICES, max_length=1, default='1')
     log = models.ImageField(verbose_name='图标', upload_to='log')
     user = models.ForeignKey(User, on_delete=models.CASCADE)
 
@@ -206,7 +205,7 @@ class Friend(PublicModel):
     dialogue = models.BooleanField(verbose_name='允许发送消息', default=True)
     status = models.BooleanField(verbose_name='好友状态', default=False)
     blacklist = models.BooleanField(verbose_name='黑名单', default=False)
-    group=models.CharField(verbose_name='组名',default='我的好友',max_length=7)
+    group = models.CharField(verbose_name='组名', default='我的好友', max_length=7)
     user = models.OneToOneField(User, on_delete=models.CASCADE)
 
 
@@ -220,7 +219,7 @@ class MessageHistory(PublicModel):
         ('img', '图片'),
         ('link', '链接'),
     )
-    genre = models.CharField(verbose_name='消息类型', choices=MESSAGE_GENRE_CHOICES, max_length=4,)
+    genre = models.CharField(verbose_name='消息类型', choices=MESSAGE_GENRE_CHOICES, max_length=4, )
     is_active = models.BooleanField(verbose_name='活跃', default=True)
     friend = models.ForeignKey(Friend, on_delete=models.CASCADE)
     # user = models.ForeignKey(User, on_delete=models.CASCADE)
@@ -231,7 +230,7 @@ class Message(PublicModel):
         消息表
         好友聊天记录表一对一
     """
-    text = models.CharField(verbose_name='文本', max_length=1024,null=True)
-    img = models.ImageField(verbose_name='图片', upload_to='img/message',null=True)
-    link = models.CharField(verbose_name='链接', max_length=128,null=True)
+    text = models.CharField(verbose_name='文本', max_length=1024, null=True)
+    img = models.ImageField(verbose_name='图片', upload_to='img/message', null=True)
+    link = models.CharField(verbose_name='链接', max_length=128, null=True)
     message_history = models.OneToOneField(MessageHistory, on_delete=models.CASCADE)

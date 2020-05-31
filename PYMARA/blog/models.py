@@ -22,10 +22,10 @@ class Blog(PublicModel):
     abstract = models.CharField(verbose_name='摘要', max_length=96)
     original = models.BooleanField(verbose_name='原创', default=True)
     author = models.IntegerField(verbose_name='作者')
-    status = models.CharField(verbose_name='状态', choices=BLOG_STATUS_CHOICES, max_length=1,default='1')
+    status = models.CharField(verbose_name='状态', choices=BLOG_STATUS_CHOICES, max_length=1, default='1')
     category = models.CharField(verbose_name='分类', max_length=16, db_index=True)
-    is_show=models.BooleanField(verbose_name='展示',default=True)
-    user = models.ForeignKey(User,on_delete=models.CASCADE)
+    is_show = models.BooleanField(verbose_name='展示', default=True)
+    user = models.ForeignKey(User, on_delete=models.CASCADE)
 
 
 class Content(PublicModel):
@@ -70,7 +70,8 @@ class BlogHistory(PublicModel):
     blog = models.OneToOneField(Blog, on_delete=models.CASCADE)
 
     class Meta:
-        ordering=['score']
+        ordering = ['score']
+
 
 class BrowserHistory(PublicModel):
     """
@@ -110,7 +111,7 @@ class Comment(PublicModel):
     genre = models.CharField(verbose_name='消息类型', choices=MESSAGE_GENRE_CHOICES, max_length=4)
     child_comment_id = models.IntegerField(verbose_name='子评论', null=True)
     blog = models.ForeignKey(Blog, on_delete=models.PROTECT)
-    user_history = models.ForeignKey(UserHistory, on_delete=models.SET_NULL,null=True)
+    user_history = models.ForeignKey(UserHistory, on_delete=models.SET_NULL, null=True)
 
 
 class CommentHistory(PublicModel):
@@ -122,4 +123,3 @@ class CommentHistory(PublicModel):
     img = models.ImageField(verbose_name='图片', upload_to='img/comment', null=True)
     link = models.CharField(verbose_name='链接', max_length=128, null=True)
     comment = models.OneToOneField(Comment, on_delete=models.CASCADE)
-
